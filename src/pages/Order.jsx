@@ -7,8 +7,6 @@ import { useNavigate } from "react-router-dom";
 import { useCart } from "../context/CartContext";
 import { toast } from "react-toastify";
 import { FaStar, FaImage } from "react-icons/fa";
-import { getImageUrl } from "../utils/imageUtils";
-import Review from "../components/Review";
 
 const Order = () => {
   const [orders, setOrders] = useState([]);
@@ -168,7 +166,7 @@ const Order = () => {
                         className="flex items-center gap-4 py-4 border-b last:border-0"
                       >
                         <img
-                          src={getImageUrl(item.product?.image)}
+                          src={item.product?.image}
                           alt={item.product?.name}
                           className="w-20 h-20 object-cover rounded-md"
                           onError={(e) => {

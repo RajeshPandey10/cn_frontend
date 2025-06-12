@@ -4,8 +4,7 @@ import { useCart } from "../context/CartContext";
 import { useWishlist } from "../context/WishlistContext";
 import { FaHeart, FaRegHeart, FaSearch, FaFilter } from "react-icons/fa";
 import { toast } from "react-toastify";
-import api from "../services/api";
-import { getImageUrl } from "../utils/imageUtils";
+import ApiEndpoints from "../services/api";
 import ProductCard from "../components/ProductCard";
 import Loading from "../components/Loading";
 import { useAuth } from "../context/AuthContext";
@@ -20,7 +19,9 @@ const Product = () => {
   const [showFilters, setShowFilters] = useState(false);
   const { addToCart } = useCart();
   const { addToWishlist, removeFromWishlist, wishlist = [] } = useWishlist(); // Default to empty array
-  const { isAuthenticated } = useAuth();
+  const { auth } = useAuth();
+  const isAuthenticated = auth.status;
+  const userRole = auth.userData?.role;
   const navigate = useNavigate();
 
   const sortOptions = [
@@ -37,15 +38,30 @@ const Product = () => {
 
   const fetchProducts = async () => {
     try {
-      const response = await api.get("/product/search", {
-        params: {
-          category: selectedCategory,
-          sort: selectedSort,
-          search: searchQuery,
-        },
-      });
+      const response = await ApiEndpoints.getAllProducts.request();
       if (response.data.success) {
-        setProducts(response.data.products);
+        let filtered = response.data.products;
+        // Filter by category if not 'all'
+        if (selectedCategory !== "all") {
+          filtered = filtered.filter((p) => p.category === selectedCategory);
+        }
+        // Search filter
+        if (searchQuery) {
+          filtered = filtered.filter((p) =>
+            p.name.toLowerCase().includes(searchQuery.toLowerCase())
+          );
+        }
+        // Sort
+        if (selectedSort === "price-high") {
+          filtered = filtered.sort((a, b) => b.price - a.price);
+        } else if (selectedSort === "price-low") {
+          filtered = filtered.sort((a, b) => a.price - b.price);
+        } else if (selectedSort === "newest") {
+          filtered = filtered.sort(
+            (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+          );
+        } // else: add more sort logic if needed
+        setProducts(filtered);
       }
       setLoading(false);
     } catch (error) {
@@ -57,9 +73,11 @@ const Product = () => {
 
   const fetchCategories = async () => {
     try {
-      const response = await api.get("/product/category");
+      // If you have a getCategories endpoint, use it. Otherwise, extract from products.
+      const response = await ApiEndpoints.getAllProducts.request();
       if (response.data.success) {
-        setCategories(response.data.categories);
+        const allCategories = response.data.products.map((p) => p.category);
+        setCategories([...new Set(allCategories)]);
       }
     } catch (error) {
       console.error("Error fetching categories:", error);

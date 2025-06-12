@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { toast } from "react-toastify";
 import { FaUser, FaEnvelope, FaPhone, FaLock, FaSpinner } from "react-icons/fa";
-import api from "../services/api";
+import ApiEndpoints from "../services/api";
 
 const SignUp = () => {
   const [formData, setFormData] = useState({
@@ -37,17 +37,17 @@ const SignUp = () => {
 
     setLoading(true);
     try {
-      // Use register-with-otp endpoint instead of signup
-      const response = await api.post("/user/signup", {
-        name: formData.name,
-        email: formData.email,
-        password: formData.password,
-        phone: formData.phone,
+      
+      const { name, email, password, phone } = formData;
+      const response = await ApiEndpoints.register.request({
+        name,
+        email,
+        password,
+        phone,
       });
 
       if (response.data.success) {
         toast.success("Registration successful! Please verify your email.");
-        // Redirect to verify email page with email in state
         navigate("/verify-email", { state: { email: formData.email } });
       }
     } catch (error) {

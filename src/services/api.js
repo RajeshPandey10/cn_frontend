@@ -1,135 +1,228 @@
-import axios from 'axios';
-import { toast } from 'react-toastify';
+import axios from "axios";
+
+const backendDomain = "http://localhost:3000/api/v1";
 
 const api = axios.create({
-    baseURL: 'http://localhost:3000/api',
-    timeout: 5000,
+  baseURL: backendDomain,
+  timeout: 5000,
+  withCredentials: true,
 });
 
-// Add base URL for images
-api.imageUrl = 'http://localhost:3000';
+// Helper for image URLs
+export const imageUrl = (path) => `http://localhost:3000/${path}`;
 
-// Get token based on path - use admin token for admin routes, user token for user routes
-const getTokenForPath = (path) => {
-    if (path.includes('/admin') || path.includes('/user/all')) {
-        return localStorage.getItem('adminToken');
-    }
-    return localStorage.getItem('userToken');
-};
+// API endpoints object (flattened, based on your Postman documentation)
+const ApiEndpoints = {
+  // Auth
+  login: {
+    url: "/user/login",
+    method: "POST",
+    request: (data) => api.post("/user/login", data),
+  },
+  register: {
+    url: "/user/register",
+    method: "POST",
+    request: (data) => api.post("/user/register", data),
+  },
+  logout: {
+    url: "/user/logout",
+    method: "POST",
+    request: () => api.post("/user/logout"),
+  },
 
-// Add request interceptor - ensure every request includes the appropriate token
-api.interceptors.request.use(
-    (config) => {
-        const token = getTokenForPath(config.url);
-        if (token) {
-            config.headers.Authorization = `Bearer ${token}`;
-        }
-        return config;
+  // User
+  getProfile: {
+    url: "/user/profile",
+    method: "GET",
+    request: () => api.get("/user/profile"),
+  },
+  updateProfile: {
+    url: "/users/profile/edit",
+    method: "PATCH",
+    request: (data, file) => {
+      const formData = new FormData();
+      Object.entries(data).forEach(([key, value]) =>
+        formData.append(key, value)
+      );
+      if (file) formData.append("avatar", file);
+      return api.patch("/users/profile/edit", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
     },
-    (error) => Promise.reject(error)
-);
+  },
+  getAllUsers: {
+    url: "/users",
+    method: "GET",
+    request: () => api.get("/users"),
+  },
+  getUserById: {
+    url: (id) => `/users/${id}`,
+    method: "GET",
+    request: (id) => api.get(`/users/${id}`),
+  },
+  deleteUser: {
+    url: (id) => `/users/${id}`,
+    method: "DELETE",
+    request: (id) => api.delete(`/users/${id}`),
+  },
 
-// Add response interceptor with improved error handling - make it much less aggressive about logout
-api.interceptors.response.use(
-    (response) => response,
-    (error) => {
-        // Only logout for confirmed authentication failures, not network errors
-        if (
-            error.response?.status === 401 &&
-            error.response?.data?.message === "Invalid or expired token" &&
-            !error.config.url.includes("/cart") &&
-            !error.config.url.includes("/wishlist")
-        ) {
-            console.warn("Token expired, logging out");
-            localStorage.removeItem("userToken");
-            localStorage.removeItem("userData");
-            delete api.defaults.headers.common["Authorization"];
-            
-            // Use a brief timeout to avoid immediate redirect issues
-            setTimeout(() => {
-                window.location.href = "/signin";
-            }, 100);
-        }
-        return Promise.reject(error);
-    }
-);
+  // Product
+  getAllProducts: {
+    url: "/products",
+    method: "GET",
+    request: () => api.get("/products"),
+  },
+  getProductById: {
+    url: (id) => `/products/${id}`,
+    method: "GET",
+    request: (id) => api.get(`/products/${id}`),
+  },
+  addProduct: {
+    url: "/products",
+    method: "POST",
+    request: (data, file) => {
+      const formData = new FormData();
+      Object.entries(data).forEach(([key, value]) =>
+        formData.append(key, value)
+      );
+      if (file) formData.append("image", file);
+      return api.post("/products", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+    },
+  },
+  updateProduct: {
+    url: (id) => `/products/${id}`,
+    method: "PUT",
+    request: (id, data, file) => {
+      const formData = new FormData();
+      Object.entries(data).forEach(([key, value]) =>
+        formData.append(key, value)
+      );
+      if (file) formData.append("image", file);
+      return api.put(`/products/${id}`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+    },
+  },
+  deleteProduct: {
+    url: (id) => `/products/${id}`,
+    method: "DELETE",
+    request: (id) => api.delete(`/products/${id}`),
+  },
 
-// Export API endpoints
-export const apiEndpoints = {
-    // Authentication endpoints
-    login: (data) => api.post('/user/signin', data),
-    register: (data) => api.post('/user/siginup', data),
-    verifyEmail: (data) => api.post('/user/verify-email', data),
-    resendOtp: (data) => api.post('/user/resend-otp', data),
+  // Cart
+  getCart: {
+    url: "/cart",
+    method: "GET",
+    request: () => api.get("/cart"),
+  },
+  addToCart: {
+    url: "/cart",
+    method: "POST",
+    request: (data) => api.post("/cart", data),
+  },
+  updateCart: {
+    url: "/cart",
+    method: "PUT",
+    request: (data) => api.put("/cart", data),
+  },
+  removeFromCart: {
+    url: (productId) => `/cart/${productId}`,
+    method: "DELETE",
+    request: (productId) => api.delete(`/cart/${productId}`),
+  },
+  clearCart: {
+    url: "/cart/clear",
+    method: "DELETE",
+    request: () => api.delete("/cart/clear"),
+  },
 
-    // Get single product
-    getProduct: (id) => api.get(`/product/${id}`),
+  // Wishlist
+  getWishlist: {
+    url: "/wishlist",
+    method: "GET",
+    request: () => api.get("/wishlist"),
+  },
+  addToWishlist: {
+    url: "/wishlist",
+    method: "POST",
+    request: (data) => api.post("/wishlist", data),
+  },
+  removeFromWishlist: {
+    url: (productId) => `/wishlist/${productId}`,
+    method: "DELETE",
+    request: (productId) => api.delete(`/wishlist/${productId}`),
+  },
+  clearWishlist: {
+    url: "/wishlist/clear",
+    method: "DELETE",
+    request: () => api.delete("/wishlist/clear"),
+  },
 
-    // Add review
-    addReview: (productId, review) => api.post(`/product/${productId}/review`, review),
+  // Orders
+  createOrder: {
+    url: "/orders",
+    method: "POST",
+    request: (data) => api.post("/orders", data),
+  },
+  getOrders: {
+    url: "/orders",
+    method: "GET",
+    request: () => api.get("/orders"),
+  },
+  getOrderById: {
+    url: (id) => `/orders/${id}`,
+    method: "GET",
+    request: (id) => api.get(`/orders/${id}`),
+  },
+  cancelOrder: {
+    url: (id) => `/orders/${id}/cancel`,
+    method: "PUT",
+    request: (id) => api.put(`/orders/${id}/cancel`),
+  },
 
-    // Change password
-    changePassword: (data) => api.put('/auth/change-password', data),
+  // Reviews
+  getProductReviews: {
+    url: (productId) => `/products/${productId}/reviews`,
+    method: "GET",
+    request: (productId) => api.get(`/products/${productId}/reviews`),
+  },
+  addReview: {
+    url: (productId) => `/products/${productId}/reviews`,
+    method: "POST",
+    request: (productId, data) =>
+      api.post(`/products/${productId}/reviews`, data),
+  },
+  deleteReview: {
+    url: (reviewId) => `/reviews/${reviewId}`,
+    method: "DELETE",
+    request: (reviewId) => api.delete(`/reviews/${reviewId}`),
+  },
 
-    // Order endpoints
-    createOrder: (orderData) => api.post("/order/new", orderData),
-    getOrders: () => api.get("/orders/me"),
-    getOrderDetails: (orderId) => api.get(`/order/${orderId}`),
-
-    // Profile endpoints
-    getProfile: () => api.get('/auth/profile'),
-    updateProfile: (data) => api.put('/auth/profile', data),
-
-    // Admin endpoints
-    getDashboardStats: () => api.get("/admin/dashboard-stats"),
-    getAdminOrders: () => api.get("/admin/orders"),
-    updateOrderStatus: (orderId, status) => api.put(`/admin/order/${orderId}`, { status }),
-
-    // User management endpoints
-    getAllUsers: () => api.get('/user/all', {
-        headers: {
-            Authorization: `Bearer ${localStorage.getItem('adminToken')}`
-        }
-    }),
-    toggleUserStatus: (userId) => api.put(`/user/toggle-status/${userId}`, {}, {
-        headers: {
-            Authorization: `Bearer ${localStorage.getItem('adminToken')}`
-        }
-    }),
-    deleteUser: (userId) => api.delete(`/user/${userId}`, {
-        headers: {
-            Authorization: `Bearer ${localStorage.getItem('adminToken')}`
-        }
-    }),
-
-    // Order management endpoints
-    getAllOrders: () => api.get('/admin/orders'),
-    clearDeliveredOrders: () => api.delete('/admin/orders/clear-delivered'),
-
-    // User profile endpoints
-    deleteProfile: () => api.delete('/auth/profile'),
-
-    // Cart endpoints
-    getCart: () => api.get('/cart'),
-    addToCart: (data) => api.post('/cart/add', data),
-    updateCart: (data) => api.put('/cart/update', data),
-    removeFromCart: (productId) => api.delete(`/cart/remove/${productId}`),
-    clearCart: () => api.delete('/cart/clear'),
-
-    // Wishlist endpoints
-    getWishlist: () => api.get('/wishlist'),
-    addToWishlist: (data) => api.post('/wishlist/add', data),
-    removeFromWishlist: (productId) => api.delete(`/wishlist/remove/${productId}`),
-    isInWishlist: (productId) => api.get(`/wishlist/check/${productId}`),
-    clearWishlist: () => api.delete('/wishlist/clear'),
-
-    // Khalti payment endpoints
-    initiateKhaltiPayment: (paymentData) => api.post('/payment/khalti/initiate', paymentData),
-    verifyKhaltiPayment: (paymentData) => api.post('/payment/khalti/verify', paymentData),
+  // Admin
+  adminLogin: {
+    url: "/admin/login",
+    method: "POST",
+    request: (data) => api.post("/admin/login", data),
+  },
+  getDashboardStats: {
+    url: "/admin/dashboard-stats",
+    method: "GET",
+    request: () => api.get("/admin/dashboard-stats"),
+  },
+  getAdminOrders: {
+    url: "/admin/orders",
+    method: "GET",
+    request: () => api.get("/admin/orders"),
+  },
+  updateOrderStatus: {
+    url: (orderId) => `/admin/orders/${orderId}`,
+    method: "PUT",
+    request: (orderId, status) =>
+      api.put(`/admin/orders/${orderId}`, { status }),
+  },
 };
 
-// Add createOrder to the api object
-api.createOrder = (orderData) => api.post("/order/new", orderData);
-
-// Export the api object as default
-export default api;
+export { api };
+export default ApiEndpoints;

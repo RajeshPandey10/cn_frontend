@@ -4,7 +4,6 @@ import { useCart } from "../context/CartContext";
 import { FaTrash, FaCartPlus } from "react-icons/fa";
 import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
-import { getImageUrl } from "../utils/imageUtils";
 import { useAuth } from "../context/AuthContext"; // Import auth context
 
 const Wishlist = () => {
@@ -101,7 +100,7 @@ const Wishlist = () => {
               onClick={() => handleProductClick(product._id)}
             >
               <img
-                src={getImageUrl(product.image)}
+                src={product.image}
                 alt={product.name}
                 className="w-full h-full object-cover"
                 onError={(e) => {

@@ -3,29 +3,29 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 import { FaEnvelope, FaLock, FaSpinner } from "react-icons/fa";
 import { toast } from "react-toastify";
 import { useAuth } from "../context/AuthContext";
-import { useAdminAuth } from "../context/AdminAuthContext";
 
 const SignIn = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
-  const [isAdminLogin, setIsAdminLogin] = useState(false);
-  const { login, isAuthenticated } = useAuth();
-  const { login: adminLogin } = useAdminAuth();
+  const { auth, login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
   // Get the redirect path from location state or default to home page
   const from = location.state?.from?.pathname || "/userHomePage";
 
-  // Check if user is already authenticated
   useEffect(() => {
-    if (isAuthenticated) {
-      console.log("User already authenticated, redirecting to:", from);
-      navigate(from, { replace: true });
+    if (auth.status) {
+      // Redirect based on role
+      if (auth.userData?.role === "admin") {
+        navigate("/admin/dashboard", { replace: true });
+      } else {
+        navigate(from, { replace: true });
+      }
     }
-  }, [isAuthenticated, navigate, from]);
+  }, [auth.status, navigate, from, auth.userData]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -33,77 +33,45 @@ const SignIn = () => {
       toast.error("Please enter both email and password");
       return;
     }
-
     setLoading(true);
     try {
-      // Use different login function based on mode (admin or regular user)
-      const loginFn = isAdminLogin ? adminLogin : login;
-      const result = await loginFn(email, password);
-
+      const result = await login(email, password);
       if (result.success) {
         toast.success("Login successful!");
-
-        // Save email if remember me is checked (only for regular users)
-        if (!isAdminLogin && rememberMe) {
+        if (rememberMe) {
           localStorage.setItem("rememberEmail", email);
         } else {
           localStorage.removeItem("rememberEmail");
         }
-
-        setTimeout(() => {
-          // Navigate to appropriate dashboard
-          if (isAdminLogin) {
-            navigate("/admin/dashboard");
-          } else {
-            // Navigate using the from path or default to userHomePage
-            navigate(from, { replace: true });
-          }
-        }, 300);
+        // Redirect will be handled by useEffect
       } else {
         toast.error(result.message || "Login failed");
       }
     } catch (error) {
-      console.error("Login error:", error);
       toast.error("An error occurred during login");
     } finally {
       setLoading(false);
     }
   };
 
-  // Load remembered email on component mount
   useEffect(() => {
     const rememberedEmail = localStorage.getItem("rememberEmail");
     if (rememberedEmail) {
       setEmail(rememberedEmail);
       setRememberMe(true);
     }
-
-    // Check if user arrived from admin route
-    if (location.pathname === "/admin/login") {
-      setIsAdminLogin(true);
-    }
-  }, [location]);
+  }, []);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4 py-12">
       <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-xl shadow-lg">
         <div>
           <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            {isAdminLogin ? "Admin Login" : "Sign in to your account"}
+            Sign in to your account
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
-            {isAdminLogin ? "Access your admin dashboard" : "Welcome back!"}
+            Welcome back!
           </p>
-
-          {/* Toggle between user and admin login */}
-          <div className="mt-3 text-center">
-            <button
-              onClick={() => setIsAdminLogin(!isAdminLogin)}
-              className="text-sm text-blue-600 hover:text-blue-800"
-            >
-              {isAdminLogin ? "Switch to User Login" : "Switch to Admin Login"}
-            </button>
-          </div>
         </div>
 
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
@@ -121,7 +89,7 @@ const SignIn = () => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="appearance-none relative block w-full px-3 py-2 pl-10 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                placeholder={isAdminLogin ? "Admin Email" : "Email address"}
+                placeholder="Email address"
               />
             </div>
 
@@ -143,36 +111,25 @@ const SignIn = () => {
             </div>
           </div>
 
-          {/* Remember Me / Forgot Password - only show for regular users */}
-          {!isAdminLogin && (
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <input
-                  id="remember-me"
-                  name="remember-me"
-                  type="checkbox"
-                  checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                />
-                <label
-                  htmlFor="remember-me"
-                  className="ml-2 block text-sm text-gray-900"
-                >
-                  Remember me
-                </label>
-              </div>
-
-              <div className="text-sm">
-                <Link
-                  to="/forgot-password"
-                  className="font-medium text-blue-600 hover:text-blue-500"
-                >
-                  Forgot your password?
-                </Link>
-              </div>
+          {/* Remember Me */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <input
+                id="remember-me"
+                name="remember-me"
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              />
+              <label
+                htmlFor="remember-me"
+                className="ml-2 block text-sm text-gray-900"
+              >
+                Remember me
+              </label>
             </div>
-          )}
+          </div>
 
           {/* Submit Button */}
           <div>
@@ -183,26 +140,22 @@ const SignIn = () => {
             >
               {loading ? (
                 <FaSpinner className="animate-spin h-5 w-5" />
-              ) : isAdminLogin ? (
-                "Admin Sign In"
               ) : (
                 "Sign in"
               )}
             </button>
           </div>
 
-          {/* Sign Up Link - only show for regular users */}
-          {!isAdminLogin && (
-            <div className="text-center text-sm">
-              <span className="text-gray-600">Don't have an account? </span>
-              <Link
-                to="/signup"
-                className="font-medium text-blue-600 hover:text-blue-500"
-              >
-                Sign up
-              </Link>
-            </div>
-          )}
+          {/* Sign Up Link */}
+          <div className="text-center text-sm">
+            <span className="text-gray-600">Don't have an account? </span>
+            <Link
+              to="/signup"
+              className="font-medium text-blue-600 hover:text-blue-500"
+            >
+              Sign up
+            </Link>
+          </div>
         </form>
       </div>
     </div>

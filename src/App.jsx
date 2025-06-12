@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import {
   BrowserRouter as Router,
   Route,
@@ -23,108 +23,17 @@ import Checkout from "./components/Checkout";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { CartProvider } from "./context/CartContext";
 import { WishlistProvider } from "./context/WishlistContext";
-import AdminRoute from "./components/AdminRoute";
-import PrivateRoute from "./components/PrivateRoute";
-import ForgotPassword from "./pages/ForgotPassword";
-import Terms from "./components/Terms.jsx"
-import RefundPolicy from "./components/RefundPolicy.jsx"
-// Admin imports
-import Layout from "./Admin/layouts/Layout";
+import ProtectedRoute from "./components/ProtectedRoute";
 import Dashboard from "./Admin/pages/Dashboard.jsx";
-import Product from "./Admin/components/Product.jsx";
-import User from "./Admin/components/User.jsx";
-import Order from "./Admin/components/Order.jsx";
-import AdminLogin from "./Admin/Auth/Login.jsx";
-import Reviews from "./Admin/components/Reviews";
-import VerifyEmail from "./pages/VerifyEmail.jsx";
-
-// Import AdminAuthProvider
-import { AdminAuthProvider } from "./context/AdminAuthContext";
-
-// Import UserReviews
-import UserReviews from "./pages/UserReviews.jsx";
-
-// Import PaymentConfirmation
-import PaymentConfirmation from "./components/PaymentConfirmation.jsx";
+import Layout from "./Admin/layouts/Layout.jsx";
 
 const App = () => {
-  const [isAuthenticated, setIsAuthenticated] = useState(() => {
-    // Initialize auth state from localStorage
-    const userToken = localStorage.getItem("userToken");
-    const userData = localStorage.getItem("userData");
-    return !!(userToken && userData);
-  });
-
-  const [isAdmin, setIsAdmin] = useState(() => {
-    // Initialize admin state from localStorage
-    const adminToken = localStorage.getItem("adminToken");
-    const adminData = localStorage.getItem("adminData");
-    return !!(adminToken && adminData);
-  });
-
-  // Add auth state listener
-  useEffect(() => {
-    const handleStorageChange = () => {
-      const userToken = localStorage.getItem("userToken");
-      const userData = localStorage.getItem("userData");
-      const adminToken = localStorage.getItem("adminToken");
-      const adminData = localStorage.getItem("adminData");
-
-      setIsAuthenticated(!!(userToken && userData));
-      setIsAdmin(!!(adminToken && adminData));
-    };
-
-    // Listen for storage changes (useful for multiple tabs)
-    window.addEventListener("storage", handleStorageChange);
-
-    return () => {
-      window.removeEventListener("storage", handleStorageChange);
-    };
-  }, []);
-
-  // Add auth check on mount and token refresh
-  useEffect(() => {
-    const validateToken = async () => {
-      try {
-        const userToken = localStorage.getItem("userToken");
-        const adminToken = localStorage.getItem("adminToken");
-
-        if (userToken) {
-          // You can add an API call here to validate the token if needed
-          setIsAuthenticated(true);
-        }
-
-        if (adminToken) {
-          // You can add an API call here to validate the admin token if needed
-          setIsAdmin(true);
-          setIsAuthenticated(true);
-        }
-      } catch (error) {
-        console.error("Token validation error:", error);
-        // Handle invalid token
-        localStorage.removeItem("userToken");
-        localStorage.removeItem("userData");
-        localStorage.removeItem("adminToken");
-        localStorage.removeItem("adminData");
-        setIsAuthenticated(false);
-        setIsAdmin(false);
-      }
-    };
-
-    validateToken();
-  }, []);
-
   // Create a wrapper component to handle header visibility
   const AppContent = () => {
     const location = useLocation();
-    const { isAuthenticated } = useAuth();
+    const { auth } = useAuth();
     const isAdminRoute = location.pathname.startsWith("/admin");
-    const hideHeaderPaths = [
-      "/admin/login",
-      "/signin",
-      "/signup",
-      "/verify-email",
-    ];
+    const hideHeaderPaths = ["/admin/login", "/signin", "/signup"];
     const shouldShowHeader =
       !hideHeaderPaths.includes(location.pathname) && !isAdminRoute;
 
@@ -138,103 +47,70 @@ const App = () => {
             <Route path="/" element={<Home />} />
             <Route path="/signin" element={<SignIn />} />
             <Route path="/signup" element={<SignUp />} />
-            <Route path="/verify-email" element={<VerifyEmail />} />
             <Route path="/product/:id" element={<ProductDetail />} />
-            <Route path="/forgot-password" element={<ForgotPassword />} />
-            <Route path="/terms" element={<Terms/>} />
-            <Route path="/refund-policy" element={<RefundPolicy />} />
 
-
-            {/* Protected User Routes - Use imported PrivateRoute component */}
+            {/* Protected User Routes - Use ProtectedRoute for user role */}
             <Route
               path="/userHomePage"
               element={
-                <PrivateRoute>
+                <ProtectedRoute allowedRoles={["user"]}>
                   <UserHomePage />
-                </PrivateRoute>
+                </ProtectedRoute>
               }
             />
             <Route
               path="/cart"
               element={
-                <PrivateRoute>
+                <ProtectedRoute allowedRoles={["user"]}>
                   <Cart />
-                </PrivateRoute>
+                </ProtectedRoute>
               }
             />
             <Route
               path="/checkout"
               element={
-                <PrivateRoute>
+                <ProtectedRoute allowedRoles={["user"]}>
                   <Checkout />
-                </PrivateRoute>
+                </ProtectedRoute>
               }
             />
             <Route
               path="/wishlist"
               element={
-                <PrivateRoute>
+                <ProtectedRoute allowedRoles={["user"]}>
                   <Wishlist />
-                </PrivateRoute>
+                </ProtectedRoute>
               }
             />
             <Route
               path="/profile"
               element={
-                <PrivateRoute>
+                <ProtectedRoute allowedRoles={["user"]}>
                   <Profile />
-                </PrivateRoute>
+                </ProtectedRoute>
               }
             />
             <Route
               path="/orders"
               element={
-                <PrivateRoute>
+                <ProtectedRoute allowedRoles={["user"]}>
                   <Orders />
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="/checkout"
-              element={
-                <PrivateRoute>
-                  <Checkout />
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="/my-reviews"
-              element={
-                <PrivateRoute>
-                  <UserReviews />
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="/payment-confirmation"
-              element={
-                <PrivateRoute>
-                  <PaymentConfirmation />
-                </PrivateRoute>
+                </ProtectedRoute>
               }
             />
 
-            {/* Admin Routes */}
-            <Route path="/admin/login" element={<AdminLogin />} />
+            {/* Admin Routes - Use ProtectedRoute for admin role, with Layout and nested routes */}
             <Route
               path="/admin/*"
               element={
-                <AdminRoute>
+                <ProtectedRoute allowedRoles={["admin"]}>
                   <Layout />
-                </AdminRoute>
+                </ProtectedRoute>
               }
             >
               <Route index element={<Navigate to="dashboard" replace />} />
               <Route path="dashboard" element={<Dashboard />} />
-              <Route path="products" element={<Product />} />
-              <Route path="users" element={<User />} />
-              <Route path="orders" element={<Order />} />
-              <Route path="reviews" element={<Reviews />} />
+              {/* Add more admin child routes here, e.g. products, users, orders, etc. */}
             </Route>
           </Routes>
         </main>
@@ -247,15 +123,13 @@ const App = () => {
 
   return (
     <AuthProvider>
-      <AdminAuthProvider>
-        <CartProvider>
-          <WishlistProvider>
-            <Router>
-              <AppContent />
-            </Router>
-          </WishlistProvider>
-        </CartProvider>
-      </AdminAuthProvider>
+      <CartProvider>
+        <WishlistProvider>
+          <Router>
+            <AppContent />
+          </Router>
+        </WishlistProvider>
+      </CartProvider>
     </AuthProvider>
   );
 };

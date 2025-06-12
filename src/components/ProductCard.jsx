@@ -4,7 +4,6 @@ import { FaHeart, FaCartPlus, FaEye, FaStar } from "react-icons/fa";
 import { useCart } from "../context/CartContext";
 import { useWishlist } from "../context/WishlistContext";
 import { toast } from "react-toastify";
-import { getImageUrl } from "../utils/imageUtils";
 
 const ProductCard = ({ product, isAuthenticated }) => {
   const [isHovered, setIsHovered] = useState(false);
@@ -70,7 +69,7 @@ const ProductCard = ({ product, isAuthenticated }) => {
         )}
 
         <img
-          src={getImageUrl(product.image)}
+          src={product.image}
           alt={product.name}
           className={`w-full h-48 object-cover transition-opacity duration-300 ${
             !imageLoaded ? "opacity-0" : "opacity-100"

@@ -14,7 +14,6 @@ import api from "../services/api";
 import { useCart } from "../context/CartContext";
 import { useWishlist } from "../context/WishlistContext";
 import Loading from "../components/Loading";
-import { getImageUrl } from "../utils/imageUtils";
 
 const ProductDetail = () => {
   const { id } = useParams();
@@ -56,7 +55,7 @@ const ProductDetail = () => {
 
       if (productRes.data.success) {
         const productData = productRes.data.product;
-        console.log("Full image URL:", getImageUrl(productData.image));
+        console.log("Full image URL:", productData.image);
         setProduct(productData);
         setReviews(reviewsRes.data.reviews || []);
       }
@@ -226,7 +225,7 @@ const ProductDetail = () => {
             )}
             {product.image && (
               <img
-                src={getImageUrl(product.image)}
+                src={product.image}
                 alt={product.name}
                 className={`w-full h-full object-center object-cover ${
                   !imageLoaded && "opacity-0"
@@ -236,10 +235,7 @@ const ProductDetail = () => {
                   setImageLoaded(true);
                 }}
                 onError={(e) => {
-                  console.log(
-                    "Failed to load image:",
-                    getImageUrl(product.image)
-                  );
+                  console.log("Failed to load image:", product.image);
                   setImageError(true);
                   e.target.src = "/images/default-product.png";
                   e.target.onerror = null;
